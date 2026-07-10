@@ -18,7 +18,7 @@ FILE_ID    = "1Tne2au-bjRO8Z9oxV-N-quZlKuJW8JTV"
 
 if not os.path.exists(MODEL_PATH):
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    gdown.download(f"https://drive.google.com/uc?id={FILE_ID}", MODEL_PATH, quiet=False)
+    gdown.download(f"https://drive.google.com/uc?id={FILE_ID}&export=download&confirm=t", MODEL_PATH, quiet=False, fuzzy=True)
 
 interpreter = Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
@@ -71,23 +71,19 @@ def predict():
     ela_arr   = np.array(ela_img, dtype=np.float32) / 255.0
     img_array = ela_arr.reshape(1, IMG_SIZE, IMG_SIZE, 3)
 
-    # Prediksi
-    prediction = model.predict(img_array)
+    # Prediksi pakai TFLite interpreter
+    interpreter.set_tensor(input_details[0]['index'], img_array)
+    interpreter.invoke()
+    prediction = interpreter.get_tensor(output_details[0]['index'])
+
     class_idx  = np.argmax(prediction[0])
     confidence = float(prediction[0][class_idx]) * 100
     label      = 'ASLI' if class_idx == 1 else 'PALSU'
-
-    # Grad-CAM
-    heatmap      = generate_gradcam(img_array, model)
-    gradcam_name = 'gradcam_' + filename
-    gradcam_path = os.path.join(app.config['UPLOAD_FOLDER'], gradcam_name)
-    save_gradcam_overlay(upload_path, heatmap, gradcam_path)
 
     return render_template('result.html',
         label        = label,
         confidence   = f'{confidence:.2f}',
         original_img = url_for('static', filename=f'uploads/{filename}'),
-        gradcam_img  = url_for('static', filename=f'uploads/{gradcam_name}'),
     )
 
 if __name__ == '__main__':
