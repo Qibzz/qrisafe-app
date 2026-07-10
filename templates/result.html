@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hasil Analisis QRIS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Hasil Analisis Bukti Bayar QRIS</h1>
+        </div>
+
+        <div class="result-card {{ 'asli' if label == 'ASLI' else 'palsu' }}">
+            <div class="result-label">
+                {{ '✅' if label == 'ASLI' else '❌' }} {{ label }}
+            </div>
+            <div class="result-confidence">
+                Tingkat Keyakinan: <strong>{{ confidence }}%</strong>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" style="width: {{ confidence }}%"></div>
+            </div>
+        </div>
+
+        <div class="images-grid">
+            <div class="image-card">
+                <h3>Gambar Original</h3>
+                <img src="{{ original_img }}" alt="Original">
+            </div>
+            <div class="image-card">
+                <h3>Grad-CAM Heatmap</h3>
+                <img src="{{ gradcam_img }}" alt="Grad-CAM">
+                <p class="hint">Area dengan warna lebih terang/menyala = fokus perhatian model saat menganalisis</p>
+            </div>
+        </div>
+
+        <a href="/" class="btn-back">← Analisis Gambar Lain</a>
+    </div>
+</body>
+</html>

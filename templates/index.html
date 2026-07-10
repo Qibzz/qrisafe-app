@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deteksi Keaslian Bukti Bayar QRIS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Deteksi Keaslian Bukti Bayar QRIS</h1>
+            <p>Upload screenshot bukti pembayaran QRIS untuk dianalisis</p>
+        </div>
+
+        {% if error %}
+        <div class="alert error">{{ error }}</div>
+        {% endif %}
+
+        <div class="upload-card">
+            <form action="/predict" method="POST" enctype="multipart/form-data">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p>Drag & drop gambar di sini atau</p>
+                    <label class="btn-upload" for="fileInput">Pilih File</label>
+                    <input type="file" id="fileInput" name="file"
+                           hidden
+                           onchange="previewImage(this)">
+                    <p class="hint">Format: JPG, JPEG, PNG (Maks. 16MB)</p>
+                </div>
+
+                <div id="previewContainer" style="display:none;">
+                    <img id="previewImg" src="" alt="Preview">
+                    <p id="previewName"></p>
+                </div>
+
+                <button type="submit" class="btn-predict">Analisis Sekarang</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function previewImage(input) {
+            const container = document.getElementById('previewContainer');
+            const img       = document.getElementById('previewImg');
+            const name      = document.getElementById('previewName');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    img.src       = e.target.result;
+                    name.textContent = input.files[0].name;
+                    container.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>
