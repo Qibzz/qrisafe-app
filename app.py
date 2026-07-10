@@ -2,7 +2,7 @@ import io
 import os
 import gdown
 import numpy as np
-from tflite_runtime.interpreter import Interpreter
+from ai_edge_litert.interpreter import Interpreter
 
 from flask import Flask, request, render_template, url_for
 from PIL import Image, ImageChops, ImageEnhance
