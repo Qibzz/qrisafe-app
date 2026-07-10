@@ -2,11 +2,7 @@ import io
 import os
 import gdown
 import numpy as np
-import tensorflow as tf
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.cm as cm
-
+from tflite_runtime.interpreter import Interpreter
 
 from flask import Flask, request, render_template, url_for
 from PIL import Image, ImageChops, ImageEnhance
@@ -16,15 +12,18 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# ── Load Model ────────────────────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model', 'model_cnn_ela_qris_compressed.h5')
-FILE_ID    = "1BdkhFhHN_3_o28gkJXABc6YM70nVXIeM"
+# ── Load Model TFLite (auto-download dari Drive kalau belum ada) ───────
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model', 'model_cnn_ela_qris_quant.tflite')
+FILE_ID    = "1Tne2au-bjRO8Z9oxV-N-quZlKuJW8JTV"
 
 if not os.path.exists(MODEL_PATH):
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     gdown.download(f"https://drive.google.com/uc?id={FILE_ID}", MODEL_PATH, quiet=False)
 
-model    = tf.keras.models.load_model(MODEL_PATH)
+interpreter = Interpreter(model_path=MODEL_PATH)
+interpreter.allocate_tensors()
+input_details  = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 IMG_SIZE = 128
 
 # ── ELA ───────────────────────────────────────────────────────────────
@@ -42,44 +41,6 @@ def convert_to_ela_image(path, quality=90):
         max_diff = 1
     ela_im = ImageEnhance.Brightness(ela_im).enhance(255.0 / max_diff)
     return ela_im
-
-# ── Grad-CAM ──────────────────────────────────────────────────────────
-def generate_gradcam(img_array, model, last_conv_layer='conv2d_1'):
-    conv_layer  = model.get_layer(last_conv_layer)
-    conv_model  = tf.keras.Model(inputs=model.inputs,
-                                  outputs=conv_layer.output)
-
-    classifier_input = tf.keras.Input(shape=conv_layer.output.shape[1:])
-    x     = classifier_input
-    found = False
-    for layer in model.layers:
-        if found:
-            x = layer(x)
-        if layer.name == last_conv_layer:
-            found = True
-    classifier_model = tf.keras.Model(classifier_input, x)
-
-    with tf.GradientTape() as tape:
-        conv_outputs = conv_model(img_array)
-        tape.watch(conv_outputs)
-        predictions  = classifier_model(conv_outputs)
-        pred_index   = tf.argmax(predictions[0])
-        loss         = predictions[:, pred_index]
-
-    grads   = tape.gradient(loss, conv_outputs)
-    pooled  = tf.reduce_mean(grads, axis=(0, 1, 2))
-    heatmap = conv_outputs[0] @ pooled[..., tf.newaxis]
-    heatmap = tf.squeeze(heatmap)
-    heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-8)
-    return heatmap.numpy()
-
-def save_gradcam_overlay(original_path, heatmap, save_path):
-    img         = Image.open(original_path).convert('RGB').resize((IMG_SIZE, IMG_SIZE))
-    colormap    = cm.get_cmap('jet')
-    heatmap_col = np.uint8(colormap(heatmap)[:, :, :3] * 255)
-    heatmap_img = Image.fromarray(heatmap_col).resize((IMG_SIZE, IMG_SIZE), Image.NEAREST)
-    overlay     = Image.blend(img, heatmap_img, alpha=0.8)
-    overlay.save(save_path)
 
 # ── Routes ────────────────────────────────────────────────────────────
 @app.route('/', methods=['GET'])
